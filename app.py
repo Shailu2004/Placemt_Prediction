@@ -20,7 +20,7 @@ le = joblib.load("label_encoder.pkl")
 # ==========================================
 
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
+api_key = st.secrets["GOOGLE_API_KEY"]
 
 if api_key:
     genai.configure(api_key=api_key)
@@ -144,3 +144,4 @@ Do not add any extra text outside this structure.
 
     else:
         st.warning("Gemini API key not found. AI guidance disabled.")
+
