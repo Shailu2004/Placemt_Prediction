@@ -1,26 +1,19 @@
 import streamlit as st
 import numpy as np
-import pickle
 import pandas as pd
+import joblib
 from dotenv import load_dotenv
 import google.generativeai as genai
 import os
 
 # ==========================================
-# LOAD MODELS
+# LOAD MODELS (Using joblib instead of pickle)
 # ==========================================
 
-with open("placement_regression_model.pkl", "rb") as f:
-    reg_model = pickle.load(f)
-
-with open("placement_classification_model.pkl", "rb") as f:
-    clf_model = pickle.load(f)
-
-with open("scaler.pkl", "rb") as f:
-    scaler = pickle.load(f)
-
-with open("label_encoder.pkl", "rb") as f:
-    le = pickle.load(f)
+reg_model = joblib.load("placement_regression_model.pkl")
+clf_model = joblib.load("placement_classification_model.pkl")
+scaler = joblib.load("scaler.pkl")
+le = joblib.load("label_encoder.pkl")
 
 # ==========================================
 # GEMINI CONFIGURATION
@@ -28,8 +21,12 @@ with open("label_encoder.pkl", "rb") as f:
 
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-2.5-flash")
+
+if api_key:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+else:
+    model = None
 
 # ==========================================
 # PAGE CONFIG
@@ -83,7 +80,7 @@ if submitted:
         "Active backlog": active
     }])
 
-    # SCALE INPUT (VERY IMPORTANT)
+    # SCALE INPUT
     scaled_input = scaler.transform(input_df)
 
     # Regression Prediction
@@ -97,10 +94,12 @@ if submitted:
     st.info(f"📊 Placement Category: {category}")
 
     # ==========================================
-    # GEMINI PROMPT ENGINEERING
+    # GEMINI RESPONSE
     # ==========================================
 
-    prompt = f"""
+    if model:
+
+        prompt = f"""
 You are an expert career placement advisor for engineering students.
 
 Analyze the student's academic and coding profile below and provide structured guidance.
@@ -138,7 +137,10 @@ Keep tone professional, motivating, and precise.
 Do not add any extra text outside this structure.
 """
 
-    response = model.generate_content(prompt)
+        response = model.generate_content(prompt)
 
-    st.markdown("### 🤖 AI Career Guidance")
-    st.markdown(response.text)
+        st.markdown("### 🤖 AI Career Guidance")
+        st.markdown(response.text)
+
+    else:
+        st.warning("Gemini API key not found. AI guidance disabled.")
